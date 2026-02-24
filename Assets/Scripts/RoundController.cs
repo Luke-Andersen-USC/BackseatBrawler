@@ -35,6 +35,11 @@ public class RoundController : MonoBehaviour
 
     private IEnumerator RoundSequence()
     {
+        foreach (var playerController in GameManager.Instance.Players)
+        {
+            playerController.RoundTimeDisplay.DisplayHolder.gameObject.SetActive(false);
+        }
+        
         _isRoundActive = true;
         
         SwitchState(RoundState.Idle);
@@ -47,6 +52,10 @@ public class RoundController : MonoBehaviour
         yield return GameManager.Instance.UIController.ShowRoundBanner("Action Phase!", _idleTime);
         
         SwitchState(RoundState.Action);
+        foreach (var playerController in GameManager.Instance.Players)
+        {
+            playerController.RoundTimeDisplay.DisplayHolder.gameObject.SetActive(true);
+        }
         yield return StartCoroutine(RoundPhase());
 
         foreach (var playerController in GameManager.Instance.Players)
@@ -55,6 +64,9 @@ public class RoundController : MonoBehaviour
             {
                 yield return null;
             }
+            
+            playerController.RoundTimeDisplay.ClearDisplayHolder();
+            playerController.RoundTimeDisplay.DisplayHolder.gameObject.SetActive(false);
         }
         
         SwitchState(RoundState.Idle);
@@ -62,6 +74,7 @@ public class RoundController : MonoBehaviour
         {
             playerController.Reset();
         }
+        
         yield return GameManager.Instance.UIController.ShowRoundBanner("Round Finished!", _idleTime);
         
         _isRoundActive = false;

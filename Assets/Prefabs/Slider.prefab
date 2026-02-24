@@ -108,7 +108,7 @@ RectTransform:
   m_Father: {fileID: 6067332962550628790}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 10, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -219,7 +219,7 @@ RectTransform:
   m_Father: {fileID: 815296977744030006}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -261,6 +261,41 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!1 &1741595355279162264
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1004960026320516079}
+  m_Layer: 0
+  m_Name: DisplayHolder
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1004960026320516079
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1741595355279162264}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 2142577032240200871}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: 100, y: 100}
+  m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &4076933295585630695
 GameObject:
   m_ObjectHideFlags: 0
@@ -294,6 +329,7 @@ RectTransform:
   - {fileID: 1460931657546741432}
   - {fileID: 6067332962550628790}
   - {fileID: 815296977744030006}
+  - {fileID: 1004960026320516079}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 1}
@@ -364,7 +400,13 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62e9d35ee1b386541b1252ae04319131, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::RoundTimeDisplay
-  slider: {fileID: 7454156380627124627}
+  _punchDisplayPrefab: {fileID: 2979724978598814106, guid: 3d5f395c0aa03424ca0e3f9915037529, type: 3}
+  _blockDisplayPrefab: {fileID: 2979724978598814106, guid: 0c14d4da2a6fc4949906f7560f0bb5db, type: 3}
+  _blockLinePrefab: {fileID: 2979724978598814106, guid: aee13d82412282d48af2ba11b1edc94f, type: 3}
+  _slider: {fileID: 7454156380627124627}
+  _sliderHandle: {fileID: 1675445781123549978}
+  _displayHolder: {fileID: 1004960026320516079}
+  _playerController: {fileID: 0}
 --- !u!1 &4505329160995691753
 GameObject:
   m_ObjectHideFlags: 0

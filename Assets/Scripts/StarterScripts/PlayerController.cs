@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -40,12 +41,17 @@ public class PlayerController : MonoBehaviour
 
     private bool _punchPressedThisFrame = false;
 
+    public RoundTimeDisplay RoundTimeDisplay { get; private set; }
+    
+    public void SetRoundTimeDisplay(RoundTimeDisplay timeDisplay)
+    {
+        RoundTimeDisplay = timeDisplay;
+    }
+    
     private void Awake()
     {
         _actionController = GetComponent<PlayerActionController>();
         SetupInput();
-        
-        
     }
 
 
@@ -81,6 +87,10 @@ public class PlayerController : MonoBehaviour
     
 
     #region Input
+    
+    public event Action<Vector2> OnMoveInput;
+    public event Action OnPunchPressed;
+    public event Action<bool> OnBlockChanged;
 
     private void ReadInput()
     {
@@ -95,6 +105,13 @@ public class PlayerController : MonoBehaviour
         };
 
         _inputFrameQueue.Enqueue(frameData);
+        
+        OnMoveInput?.Invoke(frameData.Movement);
+
+        if (frameData.PunchPressed)
+            OnPunchPressed?.Invoke();
+
+        OnBlockChanged?.Invoke(frameData.BlockHeld);
     }
 
     private void ProcessInputQueue()
