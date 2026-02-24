@@ -28,6 +28,8 @@ public class PlayerController : MonoBehaviour
     [Header("Combat Stats")]
     [SerializeField] private float maxExhaustion = 5f;
     [SerializeField] private int maxHitsTaken = 10;
+    [SerializeField] private float punchStateDuration = 1.5f;
+    [SerializeField] private float punchLockDuration = 0.8f;
 
     private PlayerInput _playerInput;
     private InputAction _moveAction;
@@ -77,9 +79,6 @@ public class PlayerController : MonoBehaviour
 
     private void ReadInput()
     {
-        if (GameManager.Instance.RoundController.CurrentState != RoundController.RoundState.InputCollection)
-            return;
-
         Vector2 movement = IsUsingKeyboardFallback() ? GetKeyboardMovement() : _moveAction.ReadValue<Vector2>();
         bool blockHeld = IsUsingKeyboardFallback() ? GetKeyboardBlockHeld() : _blockAction.IsPressed();
 
@@ -189,8 +188,23 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
+        if (_currentState == PlayerState.Punching && _timeInState < punchLockDuration)
+            return;
+
         if (frame.PunchPressed)
+        {
+            if (_currentState == PlayerState.Punching)
+            {
+                _currentState = PlayerState.Idle;
+                _timeInState = 0f;
+                _actionController.ResetPunchPose();
+            }
+            else
+            {
+                _actionController.StartNewPunch();
+            }
             SwitchState(PlayerState.Punching);
+        }
         else if (frame.BlockHeld)
             SwitchState(PlayerState.Blocking);
         else if (frame.Movement.sqrMagnitude > 0.01f)
@@ -201,7 +215,7 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateStateLogic()
     {
-        if (_currentState == PlayerState.Punching && _timeInState > 0.25f)
+        if (_currentState == PlayerState.Punching && _timeInState > punchStateDuration)
         {
             SwitchState(PlayerState.Idle);
         }
@@ -305,4 +319,5 @@ public class PlayerController : MonoBehaviour
     public float MaxExhaustion => maxExhaustion;
     public int HitsTaken => _hitsTaken;
     public int MaxHitsTaken => maxHitsTaken;
+    public int PlayerIndex => _playerIndex;
 }

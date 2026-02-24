@@ -1,11 +1,9 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Users;
 using UnityEngine.SceneManagement;
-using Object = System.Object;
 
 public class GameManager : Singleton<GameManager>
 {
@@ -25,7 +23,6 @@ public class GameManager : Singleton<GameManager>
             return players;
         }
     }
-
 
     private UIController uiController;
 
@@ -57,7 +54,6 @@ public class GameManager : Singleton<GameManager>
         }
     }
 
-
     public static void Setup()
     {
         Application.targetFrameRate = 60;
@@ -77,16 +73,14 @@ public class GameManager : Singleton<GameManager>
         KeyboardFallbackEnabled = false;
 
         int pairedCount = 0;
-
-        // Prefer gamepads when connected.
         int gamepadPairCount = Mathf.Min(playerInputs.Length, Gamepad.all.Count, 2);
+
         for (int i = 0; i < gamepadPairCount; i++)
         {
             PairDevice(playerInputs[i], Gamepad.all[i]);
             pairedCount++;
         }
 
-        // Failsafe: when no gamepads (or not enough), wire remaining players to keyboard.
         if (pairedCount < playerInputs.Length)
         {
             int keyboardPairs = PairKeyboardFallback(playerInputs, pairedCount);
@@ -129,11 +123,6 @@ public class GameManager : Singleton<GameManager>
             if (Mouse.current != null)
             {
                 InputUser.PerformPairingWithDevice(Mouse.current, user);
-            }
-
-            input.defaultControlScheme = "Keyboard&Mouse";
-            if (Mouse.current != null)
-            {
                 input.SwitchCurrentControlScheme("Keyboard&Mouse", Keyboard.current, Mouse.current);
             }
             else
@@ -141,6 +130,7 @@ public class GameManager : Singleton<GameManager>
                 input.SwitchCurrentControlScheme("Keyboard&Mouse", Keyboard.current);
             }
 
+            input.defaultControlScheme = "Keyboard&Mouse";
             paired++;
 
             Debug.Log($"Keyboard fallback paired to {input.gameObject.name}. Controls: A/D or Arrow keys move, UpArrow/Space punch, DownArrow/LeftShift block.");
@@ -158,15 +148,12 @@ public class GameManager : Singleton<GameManager>
         }
 
         var user = input.user;
-
         user.UnpairDevices();
         InputUser.PerformPairingWithDevice(device, user);
-
         input.SwitchCurrentControlScheme(device);
 
         Debug.Log($"Paired {input.gameObject.name} to {device.displayName}");
     }
-
 
     public void RestartLevel()
     {

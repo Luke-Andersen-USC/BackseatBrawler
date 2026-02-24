@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -62,11 +63,15 @@ public class UIController : MonoBehaviour
 
     private void Update()
     {
-        if (GameManager.Instance == null || GameManager.Instance.Players.Count < 2 || _p1Hud == null || _p2Hud == null)
+        if (GameManager.Instance == null || _p1Hud == null || _p2Hud == null)
             return;
 
-        PlayerController p1 = GameManager.Instance.Players[0];
-        PlayerController p2 = GameManager.Instance.Players[1];
+        List<PlayerController> players = GameManager.Instance.Players;
+        if (players.Count < 2)
+            return;
+
+        PlayerController p1 = players[0];
+        PlayerController p2 = players[1];
 
         _p1ExhaustionVisual = Mathf.MoveTowards(_p1ExhaustionVisual, p1.Exhaustion, Time.deltaTime * 4f);
         _p2ExhaustionVisual = Mathf.MoveTowards(_p2ExhaustionVisual, p2.Exhaustion, Time.deltaTime * 4f);
@@ -79,9 +84,8 @@ public class UIController : MonoBehaviour
 
     private void BuildStatusHud()
     {
-        Canvas gameplayCanvas = GameObject.Find("Gameplay Canvas") != null
-            ? GameObject.Find("Gameplay Canvas").GetComponent<Canvas>()
-            : null;
+        GameObject gameplayCanvasObject = GameObject.Find("Gameplay Canvas");
+        Canvas gameplayCanvas = gameplayCanvasObject != null ? gameplayCanvasObject.GetComponent<Canvas>() : null;
 
         if (gameplayCanvas == null)
             return;
