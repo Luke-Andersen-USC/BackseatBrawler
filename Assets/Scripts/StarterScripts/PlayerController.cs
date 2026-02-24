@@ -25,21 +25,31 @@ public class PlayerController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Transform spawnPoint;
-    
-    
+
+    [Header("Combat Stats")]
+    [SerializeField] private float maxExhaustion = 5f;
+    [SerializeField] private int maxHitsTaken = 10;
+    [SerializeField] private float punchStateDuration = 1.5f;
+    [SerializeField] private float punchLockDuration = 0.8f;
+
     private PlayerInput _playerInput;
     private InputAction _moveAction;
     private InputAction _punchAction;
     private InputAction _blockAction;
 
-    private Queue<FrameData> _inputFrameQueue = new();
+    private readonly Queue<FrameData> _inputFrameQueue = new();
 
     private PlayerState _currentState = PlayerState.Idle;
     private float _timeInState;
 
     private PlayerActionController _actionController;
 
-    private bool _punchPressedThisFrame = false;
+    private bool _punchPressedThisFrame;
+    private bool _stunnedForRound;
+    private float _exhaustion;
+    private int _hitsTaken;
+
+    private int _playerIndex;
 
     public RoundTimeDisplay RoundTimeDisplay { get; private set; }
     
@@ -54,37 +64,24 @@ public class PlayerController : MonoBehaviour
         SetupInput();
     }
 
-
     private void Update()
     {
         _timeInState += Time.deltaTime;
-        
+
         RoundController rc = GameManager.Instance.RoundController;
 
         if (rc.CurrentState == RoundController.RoundState.InputCollection)
-        { 
-            _punchPressedThisFrame = _punchAction.WasPressedThisFrame();
+        {
+            _punchPressedThisFrame = IsUsingKeyboardFallback() ? GetKeyboardPunchPressed() : _punchAction.WasPressedThisFrame();
             ReadInput();
         }
+
         if (rc.CurrentState == RoundController.RoundState.Action)
         {
             ProcessInputQueue();
             UpdateStateLogic();
         }
     }
-    private void FixedUpdate()
-    {
-        /*
-        RoundController rc = GameManager.Instance.RoundController;
-        if (rc.CurrentState == RoundController.RoundState.Action)
-        {
-            ProcessInputQueue();
-            UpdateStateLogic();
-        }\
-        */
-    }
-    
-    
 
     #region Input
     
@@ -94,14 +91,14 @@ public class PlayerController : MonoBehaviour
 
     private void ReadInput()
     {
-        if (GameManager.Instance.RoundController.CurrentState != RoundController.RoundState.InputCollection)
-            return;
+        Vector2 movement = IsUsingKeyboardFallback() ? GetKeyboardMovement() : _moveAction.ReadValue<Vector2>();
+        bool blockHeld = IsUsingKeyboardFallback() ? GetKeyboardBlockHeld() : _blockAction.IsPressed();
 
         FrameData frameData = new()
         {
-            Movement = _moveAction.ReadValue<Vector2>(),
+            Movement = movement,
             PunchPressed = _punchPressedThisFrame,
-            BlockHeld = _blockAction.IsPressed()
+            BlockHeld = blockHeld
         };
 
         _inputFrameQueue.Enqueue(frameData);
@@ -116,13 +113,83 @@ public class PlayerController : MonoBehaviour
 
     private void ProcessInputQueue()
     {
-        if (_inputFrameQueue.Count > 0)
-        {
-            FrameData frame = _inputFrameQueue.Dequeue();
+        if (_inputFrameQueue.Count <= 0)
+            return;
 
-            DetermineState(frame);
+        FrameData frame = _inputFrameQueue.Dequeue();
+
+        DetermineState(frame);
+
+        if (CanExecuteActions())
+        {
             _actionController.ExecuteActions(frame);
         }
+    }
+
+    private bool IsUsingKeyboardFallback()
+    {
+        if (GameManager.KeyboardFallbackEnabled)
+            return true;
+
+        return _playerInput != null && _playerInput.currentControlScheme == "Keyboard&Mouse";
+    }
+
+    private int GetKeyboardControlSlot()
+    {
+        PlayerController opponent = GetOpponent();
+        if (opponent != null)
+        {
+            return transform.position.x <= opponent.transform.position.x ? 0 : 1;
+        }
+
+        return _playerIndex;
+    }
+
+    private Vector2 GetKeyboardMovement()
+    {
+        if (Keyboard.current == null)
+            return Vector2.zero;
+
+        float horizontal = 0f;
+
+        if (GetKeyboardControlSlot() == 0)
+        {
+            if (Keyboard.current.aKey.isPressed) horizontal -= 1f;
+            if (Keyboard.current.dKey.isPressed) horizontal += 1f;
+        }
+        else
+        {
+            if (Keyboard.current.leftArrowKey.isPressed) horizontal -= 1f;
+            if (Keyboard.current.rightArrowKey.isPressed) horizontal += 1f;
+        }
+
+        return new Vector2(Mathf.Clamp(horizontal, -1f, 1f), 0f);
+    }
+
+    private bool GetKeyboardPunchPressed()
+    {
+        if (Keyboard.current == null)
+            return false;
+
+        if (GetKeyboardControlSlot() == 0)
+        {
+            return Keyboard.current.wKey.wasPressedThisFrame || Keyboard.current.spaceKey.wasPressedThisFrame;
+        }
+
+        return Keyboard.current.upArrowKey.wasPressedThisFrame || Keyboard.current.enterKey.wasPressedThisFrame;
+    }
+
+    private bool GetKeyboardBlockHeld()
+    {
+        if (Keyboard.current == null)
+            return false;
+
+        if (GetKeyboardControlSlot() == 0)
+        {
+            return Keyboard.current.sKey.isPressed || Keyboard.current.leftShiftKey.isPressed;
+        }
+
+        return Keyboard.current.downArrowKey.isPressed || Keyboard.current.rightShiftKey.isPressed;
     }
 
     #endregion
@@ -133,9 +200,30 @@ public class PlayerController : MonoBehaviour
     {
         if (_currentState == PlayerState.Dead)
             return;
-        
+
+        if (_stunnedForRound)
+        {
+            SwitchState(PlayerState.Dazed);
+            return;
+        }
+
+        if (_currentState == PlayerState.Punching && _timeInState < punchLockDuration)
+            return;
+
         if (frame.PunchPressed)
+        {
+            if (_currentState == PlayerState.Punching)
+            {
+                _currentState = PlayerState.Idle;
+                _timeInState = 0f;
+                _actionController.ResetPunchPose();
+            }
+            else
+            {
+                _actionController.StartNewPunch();
+            }
             SwitchState(PlayerState.Punching);
+        }
         else if (frame.BlockHeld)
             SwitchState(PlayerState.Blocking);
         else if (frame.Movement.sqrMagnitude > 0.01f)
@@ -146,8 +234,7 @@ public class PlayerController : MonoBehaviour
 
     private void UpdateStateLogic()
     {
-        // Example: auto-return to idle after punch
-        if (_currentState == PlayerState.Punching && _timeInState > 0.25f)
+        if (_currentState == PlayerState.Punching && _timeInState > punchStateDuration)
         {
             SwitchState(PlayerState.Idle);
         }
@@ -160,14 +247,12 @@ public class PlayerController : MonoBehaviour
 
         _currentState = newState;
         _timeInState = 0f;
-
-        //Debug.Log($"Switched to {_currentState}");
     }
 
     public bool IsStillExecuting()
     {
         return GameManager.Instance.RoundController.CurrentState == RoundController.RoundState.Action
-            && _inputFrameQueue.Count > 0;
+               && _inputFrameQueue.Count > 0;
     }
 
     #endregion
@@ -175,6 +260,57 @@ public class PlayerController : MonoBehaviour
     public void Reset()
     {
         transform.position = spawnPoint.position;
+        _inputFrameQueue.Clear();
+        _exhaustion = 0f;
+        _stunnedForRound = false;
+
+        if (_currentState != PlayerState.Dead)
+        {
+            SwitchState(PlayerState.Idle);
+        }
+    }
+
+    public void AddExhaustion(float amount)
+    {
+        if (_currentState == PlayerState.Dead)
+            return;
+
+        _exhaustion = Mathf.Clamp(_exhaustion + amount, 0f, maxExhaustion);
+        if (_exhaustion >= maxExhaustion)
+        {
+            _stunnedForRound = true;
+            SwitchState(PlayerState.Dazed);
+        }
+    }
+
+    public void RegisterHitTaken()
+    {
+        if (_currentState == PlayerState.Dead)
+            return;
+
+        _hitsTaken++;
+        if (_hitsTaken >= maxHitsTaken)
+        {
+            SwitchState(PlayerState.Dead);
+        }
+    }
+
+    public bool CanExecuteActions()
+    {
+        return _currentState != PlayerState.Dead && !_stunnedForRound;
+    }
+
+    public PlayerController GetOpponent()
+    {
+        foreach (PlayerController player in GameManager.Instance.Players)
+        {
+            if (player != this)
+            {
+                return player;
+            }
+        }
+
+        return null;
     }
 
     #region Setup
@@ -182,6 +318,7 @@ public class PlayerController : MonoBehaviour
     private void SetupInput()
     {
         _playerInput = GetComponent<PlayerInput>();
+        _playerIndex = _playerInput != null ? _playerInput.playerIndex : 0;
 
         var map = _playerInput.actions.FindActionMap("Player", true);
 
@@ -195,7 +332,11 @@ public class PlayerController : MonoBehaviour
     }
 
     #endregion
-    
-    
+
     public PlayerState CurrentState => _currentState;
+    public float Exhaustion => _exhaustion;
+    public float MaxExhaustion => maxExhaustion;
+    public int HitsTaken => _hitsTaken;
+    public int MaxHitsTaken => maxHitsTaken;
+    public int PlayerIndex => _playerIndex;
 }
